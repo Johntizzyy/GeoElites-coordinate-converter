@@ -9,39 +9,75 @@ crs_minna = CRS.from_epsg(4263)
 def parse_dms(value):
     """
     Parses inputs like "8.5", "8 30 15", or "8° 30' 15"" into decimal degrees.
+    Returns None if parsing fails (instead of 0.0 to distinguish from actual zero).
     """
-    if not value: return 0.0
+    if not value:
+        raise ValueError("Empty value provided")
+    
     # Clean string: replace symbols with space
-    val_str = str(value).strip().replace('°', ' ').replace("'", ' ').replace('"', ' ')
+    val_str = str(value).strip()
+    if not val_str:
+        raise ValueError("Empty value after trimming")
+    
+    val_str = val_str.replace('°', ' ').replace("'", ' ').replace('"', ' ')
 
     # Split by non-number characters
     parts = re.split(r'[^\d\.-]+', val_str)
     parts = [p for p in parts if p] # Remove empty strings
 
+    if not parts:
+        raise ValueError("No numeric values found")
+
     try:
         # Case A: Decimal Degrees (e.g., "8.5")
         if len(parts) == 1:
-            return float(parts[0])
+            result = float(parts[0])
+            if not (-180 <= result <= 180):
+                raise ValueError(f"Value {result} is out of valid range (-180 to 180)")
+            return result
 
         # Case B: DMS (e.g., "8 30 15")
         elif len(parts) >= 3:
             d = float(parts[0])
             m = float(parts[1])
             s = float(parts[2])
+            
+            # Validate minutes and seconds
+            if not (0 <= m < 60):
+                raise ValueError(f"Minutes must be between 0 and 60, got {m}")
+            if not (0 <= s < 60):
+                raise ValueError(f"Seconds must be between 0 and 60, got {s}")
+            
             # Handle negative degrees for DMS
             sign = -1 if d < 0 else 1
-            return d + (sign * m / 60) + (sign * s / 3600)
+            result = d + (sign * m / 60) + (sign * s / 3600)
+            
+            if not (-180 <= result <= 180):
+                raise ValueError(f"Converted value {result} is out of valid range")
+            return result
 
         # Case C: DM (e.g., "8 30")
         elif len(parts) == 2:
             d = float(parts[0])
             m = float(parts[1])
+            
+            if not (0 <= m < 60):
+                raise ValueError(f"Minutes must be between 0 and 60, got {m}")
+            
             sign = -1 if d < 0 else 1
-            return d + (sign * m / 60)
+            result = d + (sign * m / 60)
+            
+            if not (-180 <= result <= 180):
+                raise ValueError(f"Converted value {result} is out of valid range")
+            return result
+        else:
+            raise ValueError(f"Unexpected number of parts: {len(parts)}")
 
-    except:
-        return 0.0
-    return 0.0
+    except ValueError as e:
+        # Re-raise ValueError with more context
+        raise ValueError(f"Failed to parse '{value}': {str(e)}")
+    except Exception as e:
+        raise ValueError(f"Unexpected error parsing '{value}': {str(e)}")
 
 # --- 2. OUTPUT HELPER (Decimal -> DMS String) ---
 def to_dms(deg, is_lat=True):

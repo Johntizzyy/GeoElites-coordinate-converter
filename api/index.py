@@ -1,7 +1,13 @@
+import sys
+import os
+
+# Add parent directory to path to import modules
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from flask import Flask, render_template, request, jsonify
 from converters import wgs84_to_minna, minna_to_wgs84, minna_to_utm, utm_to_wgs84, to_dms, parse_dms
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder=os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'templates'))
 
 @app.route("/")
 def index():
@@ -155,5 +161,9 @@ def convert():
     except Exception as e:
         return jsonify({"success": False, "error": f"Conversion error: {str(e)}"}), 500
 
-if __name__ == "__main__":
-    app.run(debug=True)
+# Vercel serverless function handler
+# Vercel's @vercel/python builder automatically handles WSGI apps
+# Export the Flask app - Vercel will use it as the WSGI application
+# The @vercel/python builder looks for 'app' or 'application' variable
+application = app
+

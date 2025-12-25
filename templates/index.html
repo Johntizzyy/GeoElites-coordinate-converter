@@ -1,234 +1,1194 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GeoElites Converter</title>
-
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Coordinate converter for WGS84, Minna Datum, and UTM coordinate systems. Convert between geographic coordinate systems with interactive map visualization."
+    />
+    <meta
+      name="keywords"
+      content="coordinate converter, WGS84, Minna Datum, UTM, geodetic conversion, surveying"
+    />
+    <title>GeoElites Coordinate Converter</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
 
     <style>
-        /* GLOBAL RESET */
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f1f8e9; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; }
+      /* GLOBAL RESET */
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f1f8e9;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+      }
 
-        /* HEADER */
-        header { background: linear-gradient(90deg, #66bb6a, #43a047); color: white; text-align: center; padding: 15px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 1000; }
-        header h1 { margin: 0; font-size: 1.5rem; }
+      /* HEADER */
+      header {
+        background: linear-gradient(90deg, #66bb6a, #43a047);
+        color: white;
+        text-align: center;
+        padding: 15px 0;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+      }
+      header h1 {
+        margin: 0;
+        font-size: 1.5rem;
+      }
 
-        /* LAYOUT */
-        .main-container { display: flex; flex: 1; padding: 20px; gap: 20px; overflow: hidden; position: relative; }
+      /* LAYOUT */
+      .main-container {
+        display: flex;
+        flex: 1;
+        padding: 20px;
+        gap: 20px;
+        overflow: hidden;
+        position: relative;
+      }
 
-        /* LEFT PANEL */
-        .converter-panel { width: 450px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; z-index: 20; }
-        .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-top: 4px solid #66bb6a; }
-        .card h3 { margin-top: 0; font-size: 1.1rem; color: #2e7d32; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; margin-bottom: 15px; }
+      /* LEFT PANEL */
+      .converter-panel {
+        width: 450px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        z-index: 20;
+      }
+      .card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        border-top: 4px solid #66bb6a;
+      }
+      .card h3 {
+        margin-top: 0;
+        font-size: 1.1rem;
+        color: #2e7d32;
+        border-bottom: 2px solid #f0f0f0;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+      }
 
-        /* INPUTS & BUTTONS */
-        .input-row { display: flex; gap: 10px; margin-bottom: 10px; }
-        .input-group { flex: 1; }
-        label { display: block; font-size: 0.8rem; color: #555; margin-bottom: 4px; }
-        input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
-        button { width: 100%; background-color: #66bb6a; color: white; border: none; padding: 12px; border-radius: 6px; font-weight: 600; cursor: pointer; margin-top: 5px; }
-        button:hover { background-color: #43a047; }
-        .locate-btn { background-color: #ff9800; width: auto; font-size: 0.8rem; padding: 5px 15px; margin-bottom: 15px; }
+      /* INPUTS & BUTTONS */
+      .input-row {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      .input-group {
+        flex: 1;
+        position: relative;
+      }
+      label {
+        display: block;
+        font-size: 0.8rem;
+        color: #555;
+        margin-bottom: 4px;
+        font-weight: 500;
+      }
+      input,
+      select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        box-sizing: border-box;
+        font-size: 0.9rem;
+        transition: border-color 0.3s;
+      }
+      input:focus,
+      select:focus {
+        outline: none;
+        border-color: #66bb6a;
+        box-shadow: 0 0 0 2px rgba(102, 187, 106, 0.2);
+      }
+      input.error {
+        border-color: #f44336;
+      }
+      .error-message {
+        color: #f44336;
+        font-size: 0.75rem;
+        margin-top: 4px;
+        display: none;
+      }
+      button {
+        width: 100%;
+        background-color: #66bb6a;
+        color: white;
+        border: none;
+        padding: 12px;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        margin-top: 5px;
+        transition: background-color 0.3s, transform 0.1s;
+        font-size: 0.9rem;
+      }
+      button:hover:not(:disabled) {
+        background-color: #43a047;
+      }
+      button:active:not(:disabled) {
+        transform: scale(0.98);
+      }
+      button:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+      .locate-btn {
+        background-color: #ff9800;
+        width: auto;
+        font-size: 0.8rem;
+        padding: 5px 15px;
+        margin-bottom: 15px;
+      }
+      .locate-btn:hover:not(:disabled) {
+        background-color: #f57c00;
+      }
+      .clear-btn {
+        background-color: #757575;
+        font-size: 0.8rem;
+        padding: 6px 12px;
+        width: auto;
+        margin-top: 0;
+      }
+      .clear-btn:hover:not(:disabled) {
+        background-color: #616161;
+      }
+      .button-row {
+        display: flex;
+        gap: 5px;
+      }
 
-        /* RESULTS */
-        .result-box { margin-top: 10px; padding: 10px; background-color: #e8f5e9; border-left: 4px solid #66bb6a; font-size: 0.9rem; display: none; }
-
-        /* RIGHT PANEL (MAP) - FORCED HEIGHT FIX */
-        .map-panel { flex: 1; background: #e0e0e0; border-radius: 12px; overflow: hidden; position: relative; min-height: 400px; z-index: 10; }
-        #map { width: 100%; height: 100%; z-index: 1; }
-
-        /* FOOTER */
-        footer { background-color: #1b5e20; color: white; text-align: center; padding: 10px; font-size: 0.8rem; }
-
-        /* MOBILE */
-        @media (max-width: 768px) {
-            .main-container { flex-direction: column; height: auto; overflow: auto; }
-            .converter-panel { width: 100%; }
-            .map-panel { height: 400px; flex: none; }
+      /* LOADING INDICATOR */
+      .loading {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid #ffffff;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+        margin-right: 8px;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
         }
-    </style>
-</head>
-<body>
+      }
 
+      /* RESULTS */
+      .result-box {
+        margin-top: 10px;
+        padding: 12px;
+        background-color: #e8f5e9;
+        border-left: 4px solid #66bb6a;
+        font-size: 0.9rem;
+        display: none;
+        border-radius: 4px;
+      }
+      .result-box.error {
+        background-color: #ffebee;
+        border-left-color: #f44336;
+      }
+      .result-item {
+        margin: 8px 0;
+        padding: 8px;
+        background: white;
+        border-radius: 4px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .result-label {
+        font-weight: 600;
+        color: #2e7d32;
+      }
+      .result-value {
+        font-family: "Courier New", monospace;
+        color: #333;
+      }
+      .copy-btn {
+        background: #66bb6a;
+        border: none;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.75rem;
+        margin-left: 8px;
+      }
+      .copy-btn:hover {
+        background: #43a047;
+      }
+      .copy-btn.copied {
+        background: #4caf50;
+      }
+
+      /* RIGHT PANEL (MAP) */
+      .map-panel {
+        flex: 1;
+        background: #e0e0e0;
+        border-radius: 12px;
+        overflow: hidden;
+        position: relative;
+        min-height: 400px;
+        z-index: 10;
+      }
+      #map {
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+      }
+      .map-error {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        text-align: center;
+        display: none;
+      }
+
+      /* FOOTER */
+      footer {
+        background-color: #1b5e20;
+        color: white;
+        text-align: center;
+        padding: 10px;
+        font-size: 0.8rem;
+      }
+
+      /* MOBILE */
+      @media (max-width: 768px) {
+        .main-container {
+          flex-direction: column;
+          height: auto;
+          overflow: auto;
+          padding: 10px;
+          gap: 10px;
+        }
+        .converter-panel {
+          width: 100%;
+        }
+        .map-panel {
+          height: 400px;
+          flex: none;
+          min-height: 300px;
+        }
+        header h1 {
+          font-size: 1.2rem;
+        }
+        .card {
+          padding: 15px;
+        }
+      }
+      @media (max-width: 480px) {
+        .input-row {
+          flex-direction: column;
+        }
+        .button-row {
+          flex-direction: column;
+        }
+        button {
+          width: 100%;
+        }
+      }
+
+      /* ACCESSIBILITY */
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        border: 0;
+      }
+    </style>
+  </head>
+  <body>
     <header><h1>GeoElites Coordinate Converter</h1></header>
 
     <div class="main-container">
-        <div class="converter-panel">
-
-            <div class="card">
-                <h3>WGS84 &rarr; Minna / UTM</h3>
-                <button onclick="locateMe()" class="locate-btn">📍 Use My GPS Location</button>
-                <div class="input-row">
-                    <div class="input-group">
-                        <label>Latitude (Dec or DMS)</label>
-                        <input type="text" id="wgs_lat" placeholder="e.g. 8 30 15 or 8.5">
-                    </div>
-                    <div class="input-group">
-                        <label>Longitude (Dec or DMS)</label>
-                        <input type="text" id="wgs_lon" placeholder="e.g. 4 30 15 or 4.5">
-                    </div>
-                </div>
-                <div class="input-row">
-                    <button onclick="convert('wgs_to_minna')">To Minna</button>
-                    <button onclick="convert('wgs_to_utm')" style="margin-left: 5px;">To UTM</button>
-                </div>
-                <div id="res_wgs" class="result-box"></div>
+      <div class="converter-panel">
+        <div class="card">
+          <h3>WGS84 &rarr; Minna / UTM</h3>
+          <div style="display: flex; gap: 10px; margin-bottom: 10px">
+            <button
+              onclick="locateMe()"
+              class="locate-btn"
+              id="locate_btn"
+              aria-label="Use GPS location"
+            >
+              <i class="fas fa-crosshairs"></i> Use My GPS Location
+            </button>
+            <button
+              onclick="clearInputs('wgs')"
+              class="clear-btn"
+              aria-label="Clear inputs"
+            >
+              <i class="fas fa-times"></i> Clear
+            </button>
+          </div>
+          <div class="input-row">
+            <div class="input-group">
+              <label for="wgs_lat">Latitude (Dec or DMS)</label>
+              <input
+                type="text"
+                id="wgs_lat"
+                placeholder="e.g. 8 30 15 or 8.5"
+                aria-label="WGS84 Latitude"
+                aria-required="true"
+              />
+              <div class="error-message" id="wgs_lat_error"></div>
             </div>
-
-            <div class="card">
-                <h3>Minna (Geographic) &rarr; WGS84 / UTM</h3>
-                <div class="input-row">
-                    <div class="input-group">
-                        <label>Latitude (Minna)</label>
-                        <input type="text" id="minna_lat" placeholder="e.g. 8 30 15">
-                    </div>
-                    <div class="input-group">
-                        <label>Longitude (Minna)</label>
-                        <input type="text" id="minna_lon" placeholder="e.g. 4 30 15">
-                    </div>
-                </div>
-                <div class="input-row">
-                    <button onclick="convert('minna_to_wgs')">To WGS84</button>
-                    <button onclick="convert('minna_to_utm')" style="margin-left: 5px;">To Minna UTM</button>
-                </div>
-                <div id="res_minna" class="result-box"></div>
+            <div class="input-group">
+              <label for="wgs_lon">Longitude (Dec or DMS)</label>
+              <input
+                type="text"
+                id="wgs_lon"
+                placeholder="e.g. 4 30 15 or 4.5"
+                aria-label="WGS84 Longitude"
+                aria-required="true"
+              />
+              <div class="error-message" id="wgs_lon_error"></div>
             </div>
-
-            <div class="card">
-                <h3>Minna (UTM) &rarr; WGS84</h3>
-                <div class="input-row">
-                    <div class="input-group">
-                        <label>Easting (m)</label>
-                        <input type="text" id="utm_e" placeholder="e.g. 500000">
-                    </div>
-                    <div class="input-group">
-                        <label>Northing (m)</label>
-                        <input type="text" id="utm_n" placeholder="e.g. 900000">
-                    </div>
-                </div>
-                <div class="input-row">
-                    <div class="input-group">
-                        <label>Zone (Required)</label>
-                        <select id="utm_z">
-                            <option value="" selected disabled>-- Select Zone --</option>
-                            <option value="31">Zone 31 </option>
-                            <option value="32">Zone 32 </option>
-                            <option value="33">Zone 33 </option>
-                        </select>
-                    </div>
-                </div>
-                <button onclick="convert('utm_to_wgs')">Convert to WGS84</button>
-                <div id="res_utm" class="result-box"></div>
-            </div>
+          </div>
+          <div class="button-row">
+            <button
+              onclick="convert('wgs_to_minna')"
+              id="btn_wgs_to_minna"
+              aria-label="Convert to Minna"
+            >
+              To Minna
+            </button>
+            <button
+              onclick="convert('wgs_to_utm')"
+              id="btn_wgs_to_utm"
+              aria-label="Convert to UTM"
+            >
+              To UTM
+            </button>
+          </div>
+          <div
+            id="res_wgs"
+            class="result-box"
+            role="region"
+            aria-live="polite"
+            aria-label="Conversion results"
+          ></div>
         </div>
 
-        <div class="map-panel">
-            <div id="map"></div>
+        <div class="card">
+          <h3>Minna (Geographic) &rarr; WGS84 / UTM</h3>
+          <button
+            onclick="clearInputs('minna')"
+            class="clear-btn"
+            style="margin-bottom: 10px"
+            aria-label="Clear inputs"
+          >
+            <i class="fas fa-times"></i> Clear
+          </button>
+          <div class="input-row">
+            <div class="input-group">
+              <label for="minna_lat">Latitude (Minna)</label>
+              <input
+                type="text"
+                id="minna_lat"
+                placeholder="e.g. 8 30 15"
+                aria-label="Minna Latitude"
+                aria-required="true"
+              />
+              <div class="error-message" id="minna_lat_error"></div>
+            </div>
+            <div class="input-group">
+              <label for="minna_lon">Longitude (Minna)</label>
+              <input
+                type="text"
+                id="minna_lon"
+                placeholder="e.g. 4 30 15"
+                aria-label="Minna Longitude"
+                aria-required="true"
+              />
+              <div class="error-message" id="minna_lon_error"></div>
+            </div>
+          </div>
+          <div class="button-row">
+            <button
+              onclick="convert('minna_to_wgs')"
+              id="btn_minna_to_wgs"
+              aria-label="Convert to WGS84"
+            >
+              To WGS84
+            </button>
+            <button
+              onclick="convert('minna_to_utm')"
+              id="btn_minna_to_utm"
+              aria-label="Convert to Minna UTM"
+            >
+              To Minna UTM
+            </button>
+          </div>
+          <div
+            id="res_minna"
+            class="result-box"
+            role="region"
+            aria-live="polite"
+            aria-label="Conversion results"
+          ></div>
         </div>
+
+        <div class="card">
+          <h3>Minna (UTM) &rarr; WGS84</h3>
+          <button
+            onclick="clearInputs('utm')"
+            class="clear-btn"
+            style="margin-bottom: 10px"
+            aria-label="Clear inputs"
+          >
+            <i class="fas fa-times"></i> Clear
+          </button>
+          <div class="input-row">
+            <div class="input-group">
+              <label for="utm_e">Easting (m)</label>
+              <input
+                type="text"
+                id="utm_e"
+                placeholder="e.g. 500000"
+                aria-label="UTM Easting"
+                aria-required="true"
+              />
+              <div class="error-message" id="utm_e_error"></div>
+            </div>
+            <div class="input-group">
+              <label for="utm_n">Northing (m)</label>
+              <input
+                type="text"
+                id="utm_n"
+                placeholder="e.g. 900000"
+                aria-label="UTM Northing"
+                aria-required="true"
+              />
+              <div class="error-message" id="utm_n_error"></div>
+            </div>
+          </div>
+          <div class="input-row">
+            <div class="input-group">
+              <label for="utm_z">Zone (Required)</label>
+              <select id="utm_z" aria-label="UTM Zone" aria-required="true">
+                <option value="" selected disabled>-- Select Zone --</option>
+                <option value="31">Zone 31</option>
+                <option value="32">Zone 32</option>
+                <option value="33">Zone 33</option>
+              </select>
+              <div class="error-message" id="utm_z_error"></div>
+            </div>
+          </div>
+          <button
+            onclick="convert('utm_to_wgs')"
+            id="btn_utm_to_wgs"
+            aria-label="Convert to WGS84"
+          >
+            Convert to WGS84
+          </button>
+          <div
+            id="res_utm"
+            class="result-box"
+            role="region"
+            aria-live="polite"
+            aria-label="Conversion results"
+          ></div>
+        </div>
+      </div>
+
+      <div class="map-panel">
+        <div id="map"></div>
+        <div class="map-error" id="map_error">
+          <p><strong>Map Loading Error</strong></p>
+          <p>Unable to load map. Please check your internet connection.</p>
+        </div>
+      </div>
     </div>
 
-    <footer>&copy; Department of Surveying and Geoinformatics, University of Ilorin</footer>
+    <footer>
+      &copy; Department of Surveying and Geoinformatics, University of Ilorin
+    </footer>
 
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
     <script>
-        // --- INITIALIZE MAP ---
-        var map = L.map('map', { zoomControl: false, center: [8.482, 4.675], zoom: 13 });
-        var marker;
-        var accuracyCircle;
+      // --- GLOBAL VARIABLES ---
+      var map = null;
+      var marker = null;
+      var accuracyCircle = null;
+      var activeButtons = new Set();
 
-        // --- BASEMAPS ---
-        var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
-        var sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Tiles © Esri' });
-        L.control.layers({ "Street Map": osm, "Satellite": sat }).addTo(map);
+      // --- INITIALIZE MAP ---
+      function initMap() {
+        try {
+          map = L.map("map", {
+            zoomControl: false,
+            center: [8.482, 4.675],
+            zoom: 13,
+          });
 
-        // --- CONTROLS ---
-        L.control.zoom({ position: 'topright' }).addTo(map);
-        L.control.scale({ position: 'bottomright', metric: true, imperial: false }).addTo(map);
+          // --- BASEMAPS ---
+          var osm = L.tileLayer(
+            "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+            {
+              maxZoom: 19,
+              attribution: "© OpenStreetMap",
+              errorTileUrl:
+                "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
+            }
+          ).addTo(map);
 
-        // --- HELPER FUNCTIONS ---
-        function showResult(id, html) {
-            var el = document.getElementById(id);
-            el.innerHTML = html;
-            el.style.display = 'block';
+          var sat = L.tileLayer(
+            "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+            {
+              maxZoom: 19,
+              attribution: "Tiles © Esri",
+              errorTileUrl:
+                "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
+            }
+          );
+
+          L.control.layers({ "Street Map": osm, Satellite: sat }).addTo(map);
+
+          // --- CONTROLS ---
+          L.control.zoom({ position: "topright" }).addTo(map);
+          L.control
+            .scale({ position: "bottomright", metric: true, imperial: false })
+            .addTo(map);
+
+          document.getElementById("map_error").style.display = "none";
+        } catch (e) {
+          console.error("Map initialization error:", e);
+          document.getElementById("map_error").style.display = "block";
+        }
+      }
+
+      // Initialize map on load
+      if (typeof L !== "undefined") {
+        initMap();
+      } else {
+        document.getElementById("map_error").style.display = "block";
+      }
+
+      // --- VALIDATION FUNCTIONS ---
+      function validateCoordinate(value, isLat) {
+        if (!value || value.trim() === "") {
+          return { valid: false, error: "This field is required" };
         }
 
-        function updateMap(lat, lon, popupText) {
-            lat = parseFloat(lat); lon = parseFloat(lon);
-            if (isNaN(lat) || isNaN(lon)) return;
-            if (marker) map.removeLayer(marker);
-            marker = L.marker([lat, lon]).addTo(map).bindPopup(popupText).openPopup();
-            map.flyTo([lat, lon], 17, { animate: true, duration: 1.5 });
+        // Try to parse as DMS or decimal
+        var parts = value
+          .trim()
+          .replace(/[°'"]/g, " ")
+          .split(/\s+/)
+          .filter((p) => p);
+
+        if (parts.length === 0) {
+          return { valid: false, error: "Invalid format" };
         }
 
-        // --- GPS LOGIC ---
-        function locateMe() {
-            if (!navigator.geolocation) return alert("Geolocation not supported.");
-            navigator.geolocation.getCurrentPosition((pos) => {
-                const lat = pos.coords.latitude;
-                const lon = pos.coords.longitude;
-                const acc = pos.coords.accuracy;
-
-                document.getElementById('wgs_lat').value = lat.toFixed(7);
-                document.getElementById('wgs_lon').value = lon.toFixed(7);
-
-                updateMap(lat, lon, `<b>Your GPS Location</b><br>Accuracy: ±${Math.round(acc)}m`);
-
-                if (accuracyCircle) map.removeLayer(accuracyCircle);
-                accuracyCircle = L.circle([lat, lon], { color: '#136AEC', fillColor: '#136AEC', fillOpacity: 0.15, radius: acc }).addTo(map);
-                map.fitBounds(accuracyCircle.getBounds());
-            }, (err) => { alert("GPS Error: " + err.message); }, { enableHighAccuracy: true });
+        var num = parseFloat(parts[0]);
+        if (isNaN(num)) {
+          return { valid: false, error: "Invalid number format" };
         }
 
-        // --- CONVERSION LOGIC ---
-        function convert(type) {
-            var data = { type: type };
+        // Check bounds
+        if (isLat && (num < -90 || num > 90)) {
+          return { valid: false, error: "Latitude must be between -90 and 90" };
+        }
+        if (!isLat && (num < -180 || num > 180)) {
+          return {
+            valid: false,
+            error: "Longitude must be between -180 and 180",
+          };
+        }
 
-            // Gather Inputs
-            if (type.includes('wgs')) {
-                data.lat = document.getElementById('wgs_lat').value;
-                data.lon = document.getElementById('wgs_lon').value;
-            } else if (type.includes('minna')) {
-                data.lat = document.getElementById('minna_lat').value;
-                data.lon = document.getElementById('minna_lon').value;
-            } else if (type.includes('utm')) {
-                data.easting = document.getElementById('utm_e').value;
-                data.northing = document.getElementById('utm_n').value;
-                data.zone = document.getElementById('utm_z').value;
-                if (!data.zone) return alert("⚠️ Please select a UTM Zone!");
+        return { valid: true, error: "" };
+      }
+
+      function validateUTM(easting, northing) {
+        var e = parseFloat(easting);
+        var n = parseFloat(northing);
+
+        if (isNaN(e) || isNaN(n)) {
+          return {
+            valid: false,
+            error: "Easting and Northing must be valid numbers",
+          };
+        }
+
+        if (e < 0 || e > 1000000) {
+          return {
+            valid: false,
+            error: "Easting should be between 0 and 1,000,000m",
+          };
+        }
+
+        if (n < 0 || n > 10000000) {
+          return {
+            valid: false,
+            error: "Northing should be between 0 and 10,000,000m",
+          };
+        }
+
+        return { valid: true, error: "" };
+      }
+
+      function showError(inputId, errorId, message) {
+        var input = document.getElementById(inputId);
+        var errorEl = document.getElementById(errorId);
+        input.classList.add("error");
+        errorEl.textContent = message;
+        errorEl.style.display = "block";
+      }
+
+      function clearError(inputId, errorId) {
+        var input = document.getElementById(inputId);
+        var errorEl = document.getElementById(errorId);
+        input.classList.remove("error");
+        errorEl.style.display = "none";
+      }
+
+      function clearAllErrors() {
+        var errors = document.querySelectorAll(".error-message");
+        var inputs = document.querySelectorAll("input.error");
+        errors.forEach((el) => (el.style.display = "none"));
+        inputs.forEach((el) => el.classList.remove("error"));
+      }
+
+      // --- CLEAR INPUTS ---
+      function clearInputs(type) {
+        if (type === "wgs") {
+          document.getElementById("wgs_lat").value = "";
+          document.getElementById("wgs_lon").value = "";
+          document.getElementById("res_wgs").style.display = "none";
+          clearError("wgs_lat", "wgs_lat_error");
+          clearError("wgs_lon", "wgs_lon_error");
+        } else if (type === "minna") {
+          document.getElementById("minna_lat").value = "";
+          document.getElementById("minna_lon").value = "";
+          document.getElementById("res_minna").style.display = "none";
+          clearError("minna_lat", "minna_lat_error");
+          clearError("minna_lon", "minna_lon_error");
+        } else if (type === "utm") {
+          document.getElementById("utm_e").value = "";
+          document.getElementById("utm_n").value = "";
+          document.getElementById("utm_z").value = "";
+          document.getElementById("res_utm").style.display = "none";
+          clearError("utm_e", "utm_e_error");
+          clearError("utm_n", "utm_n_error");
+          clearError("utm_z", "utm_z_error");
+        }
+        if (marker && map) {
+          map.removeLayer(marker);
+          marker = null;
+        }
+      }
+
+      // --- LOADING STATE ---
+      function setLoading(buttonId, isLoading) {
+        var btn = document.getElementById(buttonId);
+        if (!btn) return;
+
+        if (isLoading) {
+          btn.disabled = true;
+          btn.innerHTML =
+            '<span class="loading"></span>' + btn.textContent.trim();
+          activeButtons.add(buttonId);
+        } else {
+          btn.disabled = false;
+          var text = btn.textContent.trim();
+          btn.innerHTML = text.replace(/<span class="loading"><\/span>/, "");
+          activeButtons.delete(buttonId);
+        }
+      }
+
+      // --- RESULT DISPLAY ---
+      function showResult(id, html, isError) {
+        var el = document.getElementById(id);
+        el.innerHTML = html;
+        el.className = "result-box" + (isError ? " error" : "");
+        el.style.display = "block";
+      }
+
+      function formatResult(data, type) {
+        var html = "";
+
+        if (type === "wgs_to_minna") {
+          html =
+            '<div class="result-item">' +
+            '<span class="result-label">Minna Latitude:</span>' +
+            '<span class="result-value">' +
+            data.lat_dms +
+            "</span>" +
+            '<button class="copy-btn" onclick="copyToClipboard(\'' +
+            data.lat_dms +
+            '\', this)"><i class="fas fa-copy"></i></button>' +
+            "</div>";
+          html +=
+            '<div class="result-item">' +
+            '<span class="result-label">Decimal:</span>' +
+            '<span class="result-value">' +
+            data.lat.toFixed(8) +
+            "</span>" +
+            '<button class="copy-btn" onclick="copyToClipboard(\'' +
+            data.lat.toFixed(8) +
+            '\', this)"><i class="fas fa-copy"></i></button>' +
+            "</div>";
+          html +=
+            '<div class="result-item">' +
+            '<span class="result-label">Minna Longitude:</span>' +
+            '<span class="result-value">' +
+            data.lon_dms +
+            "</span>" +
+            '<button class="copy-btn" onclick="copyToClipboard(\'' +
+            data.lon_dms +
+            '\', this)"><i class="fas fa-copy"></i></button>' +
+            "</div>";
+          html +=
+            '<div class="result-item">' +
+            '<span class="result-label">Decimal:</span>' +
+            '<span class="result-value">' +
+            data.lon.toFixed(8) +
+            "</span>" +
+            '<button class="copy-btn" onclick="copyToClipboard(\'' +
+            data.lon.toFixed(8) +
+            '\', this)"><i class="fas fa-copy"></i></button>' +
+            "</div>";
+        } else if (type === "wgs_to_utm") {
+          html =
+            '<div class="result-item">' +
+            '<span class="result-label">Zone:</span>' +
+            '<span class="result-value">' +
+            data.zone +
+            "</span>" +
+            "</div>";
+          html +=
+            '<div class="result-item">' +
+            '<span class="result-label">Easting:</span>' +
+            '<span class="result-value">' +
+            data.easting +
+            " m</span>" +
+            '<button class="copy-btn" onclick="copyToClipboard(\'' +
+            data.easting +
+            '\', this)"><i class="fas fa-copy"></i></button>' +
+            "</div>";
+          html +=
+            '<div class="result-item">' +
+            '<span class="result-label">Northing:</span>' +
+            '<span class="result-value">' +
+            data.northing +
+            " m</span>" +
+            '<button class="copy-btn" onclick="copyToClipboard(\'' +
+            data.northing +
+            '\', this)"><i class="fas fa-copy"></i></button>' +
+            "</div>";
+        } else if (type === "minna_to_wgs" || type === "utm_to_wgs") {
+          html =
+            '<div class="result-item">' +
+            '<span class="result-label">WGS84 Latitude:</span>' +
+            '<span class="result-value">' +
+            data.lat_dms +
+            "</span>" +
+            '<button class="copy-btn" onclick="copyToClipboard(\'' +
+            data.lat_dms +
+            '\', this)"><i class="fas fa-copy"></i></button>' +
+            "</div>";
+          html +=
+            '<div class="result-item">' +
+            '<span class="result-label">Decimal:</span>' +
+            '<span class="result-value">' +
+            data.lat.toFixed(8) +
+            "</span>" +
+            '<button class="copy-btn" onclick="copyToClipboard(\'' +
+            data.lat.toFixed(8) +
+            '\', this)"><i class="fas fa-copy"></i></button>' +
+            "</div>";
+          html +=
+            '<div class="result-item">' +
+            '<span class="result-label">WGS84 Longitude:</span>' +
+            '<span class="result-value">' +
+            data.lon_dms +
+            "</span>" +
+            '<button class="copy-btn" onclick="copyToClipboard(\'' +
+            data.lon_dms +
+            '\', this)"><i class="fas fa-copy"></i></button>' +
+            "</div>";
+          html +=
+            '<div class="result-item">' +
+            '<span class="result-label">Decimal:</span>' +
+            '<span class="result-value">' +
+            data.lon.toFixed(8) +
+            "</span>" +
+            '<button class="copy-btn" onclick="copyToClipboard(\'' +
+            data.lon.toFixed(8) +
+            '\', this)"><i class="fas fa-copy"></i></button>' +
+            "</div>";
+        } else if (type === "minna_to_utm") {
+          html =
+            '<div class="result-item">' +
+            '<span class="result-label">Zone:</span>' +
+            '<span class="result-value">' +
+            data.zone +
+            "</span>" +
+            "</div>";
+          html +=
+            '<div class="result-item">' +
+            '<span class="result-label">Easting:</span>' +
+            '<span class="result-value">' +
+            data.easting +
+            " m</span>" +
+            '<button class="copy-btn" onclick="copyToClipboard(\'' +
+            data.easting +
+            '\', this)"><i class="fas fa-copy"></i></button>' +
+            "</div>";
+          html +=
+            '<div class="result-item">' +
+            '<span class="result-label">Northing:</span>' +
+            '<span class="result-value">' +
+            data.northing +
+            " m</span>" +
+            '<button class="copy-btn" onclick="copyToClipboard(\'' +
+            data.northing +
+            '\', this)"><i class="fas fa-copy"></i></button>' +
+            "</div>";
+        }
+
+        return html;
+      }
+
+      // --- COPY TO CLIPBOARD ---
+      function copyToClipboard(text, button) {
+        navigator.clipboard
+          .writeText(text)
+          .then(function () {
+            var originalHTML = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-check"></i>';
+            button.classList.add("copied");
+            setTimeout(function () {
+              button.innerHTML = originalHTML;
+              button.classList.remove("copied");
+            }, 2000);
+          })
+          .catch(function (err) {
+            alert("Failed to copy: " + err);
+          });
+      }
+
+      // --- MAP UPDATE ---
+      function updateMap(lat, lon, popupText) {
+        if (!map) return;
+        lat = parseFloat(lat);
+        lon = parseFloat(lon);
+        if (isNaN(lat) || isNaN(lon)) return;
+
+        // Validate coordinates are within reasonable bounds
+        if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+          console.warn("Coordinates out of bounds:", lat, lon);
+          return;
+        }
+
+        if (marker) map.removeLayer(marker);
+        marker = L.marker([lat, lon], {
+          icon: L.icon({
+            iconUrl: "https://unpkg.com/leaflet/dist/images/marker-icon.png",
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+          }),
+        }).addTo(map);
+        marker.bindPopup(popupText).openPopup();
+        map.flyTo([lat, lon], 17, { animate: true, duration: 1.5 });
+      }
+
+      // --- GPS LOGIC ---
+      function locateMe() {
+        if (!navigator.geolocation) {
+          showResult(
+            "res_wgs",
+            "<strong>Error:</strong> Geolocation is not supported by your browser.",
+            true
+          );
+          return;
+        }
+
+        var btn = document.getElementById("locate_btn");
+        var originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="loading"></span> Locating...';
+
+        navigator.geolocation.getCurrentPosition(
+          function (pos) {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+            const acc = pos.coords.accuracy;
+
+            document.getElementById("wgs_lat").value = lat.toFixed(7);
+            document.getElementById("wgs_lon").value = lon.toFixed(7);
+            clearAllErrors();
+
+            updateMap(
+              lat,
+              lon,
+              "<b>Your GPS Location</b><br>Accuracy: ±" + Math.round(acc) + "m"
+            );
+
+            if (accuracyCircle) map.removeLayer(accuracyCircle);
+            accuracyCircle = L.circle([lat, lon], {
+              color: "#136AEC",
+              fillColor: "#136AEC",
+              fillOpacity: 0.15,
+              radius: acc,
+            }).addTo(map);
+            map.fitBounds(accuracyCircle.getBounds());
+          },
+          function (err) {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            var errorMsg = "GPS Error: ";
+            switch (err.code) {
+              case err.PERMISSION_DENIED:
+                errorMsg +=
+                  "Location access denied. Please enable location permissions.";
+                break;
+              case err.POSITION_UNAVAILABLE:
+                errorMsg += "Location information unavailable.";
+                break;
+              case err.TIMEOUT:
+                errorMsg += "Location request timed out.";
+                break;
+              default:
+                errorMsg += err.message;
+            }
+            showResult("res_wgs", "<strong>Error:</strong> " + errorMsg, true);
+          },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+      }
+
+      // --- CONVERSION LOGIC ---
+      function convert(type) {
+        clearAllErrors();
+        var data = { type: type };
+        var isValid = true;
+        var buttonId = "";
+
+        // Gather and validate inputs
+        if (type.includes("wgs")) {
+          data.lat = document.getElementById("wgs_lat").value.trim();
+          data.lon = document.getElementById("wgs_lon").value.trim();
+
+          var latVal = validateCoordinate(data.lat, true);
+          var lonVal = validateCoordinate(data.lon, false);
+
+          if (!latVal.valid) {
+            showError("wgs_lat", "wgs_lat_error", latVal.error);
+            isValid = false;
+          }
+          if (!lonVal.valid) {
+            showError("wgs_lon", "wgs_lon_error", lonVal.error);
+            isValid = false;
+          }
+
+          buttonId =
+            type === "wgs_to_minna" ? "btn_wgs_to_minna" : "btn_wgs_to_utm";
+        } else if (type.includes("minna") && !type.includes("utm")) {
+          data.lat = document.getElementById("minna_lat").value.trim();
+          data.lon = document.getElementById("minna_lon").value.trim();
+
+          var latVal = validateCoordinate(data.lat, true);
+          var lonVal = validateCoordinate(data.lon, false);
+
+          if (!latVal.valid) {
+            showError("minna_lat", "minna_lat_error", latVal.error);
+            isValid = false;
+          }
+          if (!lonVal.valid) {
+            showError("minna_lon", "minna_lon_error", lonVal.error);
+            isValid = false;
+          }
+
+          buttonId = "btn_minna_to_wgs";
+        } else if (type === "minna_to_utm") {
+          data.lat = document.getElementById("minna_lat").value.trim();
+          data.lon = document.getElementById("minna_lon").value.trim();
+
+          var latVal = validateCoordinate(data.lat, true);
+          var lonVal = validateCoordinate(data.lon, false);
+
+          if (!latVal.valid) {
+            showError("minna_lat", "minna_lat_error", latVal.error);
+            isValid = false;
+          }
+          if (!lonVal.valid) {
+            showError("minna_lon", "minna_lon_error", lonVal.error);
+            isValid = false;
+          }
+
+          buttonId = "btn_minna_to_utm";
+        } else if (type === "utm_to_wgs") {
+          data.easting = document.getElementById("utm_e").value.trim();
+          data.northing = document.getElementById("utm_n").value.trim();
+          data.zone = document.getElementById("utm_z").value;
+
+          if (!data.zone) {
+            showError("utm_z", "utm_z_error", "Please select a UTM zone");
+            isValid = false;
+          }
+
+          var utmVal = validateUTM(data.easting, data.northing);
+          if (!utmVal.valid) {
+            showError("utm_e", "utm_e_error", utmVal.error);
+            showError("utm_n", "utm_n_error", utmVal.error);
+            isValid = false;
+          }
+
+          buttonId = "btn_utm_to_wgs";
+        }
+
+        if (!isValid) {
+          return;
+        }
+
+        // Set loading state
+        setLoading(buttonId, true);
+
+        // Send to Backend
+        fetch("/convert", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        })
+          .then((res) => {
+            if (!res.ok) {
+              throw new Error("Network response was not ok");
+            }
+            return res.json();
+          })
+          .then((res) => {
+            setLoading(buttonId, false);
+
+            if (!res.success) {
+              var resultId = type.includes("wgs")
+                ? "res_wgs"
+                : type.includes("minna")
+                ? "res_minna"
+                : "res_utm";
+              showResult(
+                resultId,
+                "<strong>Error:</strong> " +
+                  (res.error || "Unknown error occurred"),
+                true
+              );
+              return;
             }
 
-            // Send to Backend
-            fetch('/convert', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            })
-            .then(res => res.json())
-            .then(res => {
-                if (!res.success) return alert("Error: " + res.error);
+            // Display results
+            var resultId = type.includes("wgs")
+              ? "res_wgs"
+              : type.includes("minna")
+              ? "res_minna"
+              : "res_utm";
+            var html = formatResult(res, type);
+            showResult(resultId, html, false);
 
-                if (type === 'wgs_to_minna') {
-                    showResult('res_wgs', `<b>Minna Datum:</b><br>Lat: ${res.lat_dms}<br>Lon: ${res.lon_dms}`);
-                    updateMap(data.lat, data.lon, "Input WGS84");
-                } else if (type === 'wgs_to_utm') {
-                    showResult('res_wgs', `<b>Zone ${res.zone}:</b><br>E: ${res.easting}m<br>N: ${res.northing}m`);
-                    updateMap(data.lat, data.lon, "Input WGS84");
-                } else if (type === 'minna_to_wgs') {
-                    showResult('res_minna', `<b>WGS84 Result:</b><br>Lat: ${res.lat_dms}<br>Lon: ${res.lon_dms}`);
-                    updateMap(res.lat, res.lon, "Converted WGS84");
-                } else if (type === 'minna_to_utm') {
-                    showResult('res_minna', `<b>Minna UTM:</b><br>Zone ${res.zone}<br>E: ${res.easting}<br>N: ${res.northing}`);
-                    updateMap(res.map_lat, res.map_lon, "Converted Location");
-                } else if (type === 'utm_to_wgs') {
-                    showResult('res_utm', `<b>WGS84 Result:</b><br>Lat: ${res.lat_dms}<br>Lon: ${res.lon_dms}`);
-                    updateMap(res.lat, res.lon, "Converted WGS84");
-                }
-            })
-            .catch(err => console.error(err));
-        }
+            // Update map
+            if (type === "wgs_to_minna" || type === "wgs_to_utm") {
+              var lat = parseFloat(data.lat);
+              var lon = parseFloat(data.lon);
+              if (!isNaN(lat) && !isNaN(lon)) {
+                updateMap(
+                  lat,
+                  lon,
+                  "Input WGS84<br>Lat: " +
+                    lat.toFixed(6) +
+                    "<br>Lon: " +
+                    lon.toFixed(6)
+                );
+              }
+            } else if (type === "minna_to_wgs" || type === "utm_to_wgs") {
+              updateMap(
+                res.lat,
+                res.lon,
+                "Converted WGS84<br>Lat: " +
+                  res.lat.toFixed(6) +
+                  "<br>Lon: " +
+                  res.lon.toFixed(6)
+              );
+            } else if (type === "minna_to_utm") {
+              updateMap(
+                res.map_lat,
+                res.map_lon,
+                "Converted Location<br>Zone: " +
+                  res.zone +
+                  "<br>E: " +
+                  res.easting +
+                  "m<br>N: " +
+                  res.northing +
+                  "m"
+              );
+            }
+          })
+          .catch((err) => {
+            setLoading(buttonId, false);
+            console.error("Conversion error:", err);
+            var resultId = type.includes("wgs")
+              ? "res_wgs"
+              : type.includes("minna")
+              ? "res_minna"
+              : "res_utm";
+            showResult(
+              resultId,
+              "<strong>Error:</strong> Network error. Please check your connection and try again.",
+              true
+            );
+          });
+      }
+
+      // Add keyboard support for Enter key
+      document.addEventListener("DOMContentLoaded", function () {
+        var inputs = document.querySelectorAll("input");
+        inputs.forEach(function (input) {
+          input.addEventListener("keypress", function (e) {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              var card = input.closest(".card");
+              var firstButton = card.querySelector(
+                "button:not(.clear-btn):not(.locate-btn)"
+              );
+              if (firstButton) {
+                firstButton.click();
+              }
+            }
+          });
+        });
+      });
     </script>
-</body>
+  </body>
 </html>
