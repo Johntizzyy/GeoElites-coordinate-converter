@@ -675,7 +675,7 @@
 
       function clearAllErrors() {
         var errors = document.querySelectorAll(".error-message");
-        var inputs = document.querySelectorAll("input.error");
+        var inputs = document.querySelectorAll("input.error, select.error");
         errors.forEach((el) => (el.style.display = "none"));
         inputs.forEach((el) => el.classList.remove("error"));
       }
@@ -707,6 +707,10 @@
           map.removeLayer(marker);
           marker = null;
         }
+        if (accuracyCircle && map) {
+          map.removeLayer(accuracyCircle);
+          accuracyCircle = null;
+        }
       }
 
       // --- LOADING STATE ---
@@ -715,16 +719,40 @@
         if (!btn) return;
 
         if (isLoading) {
+          // Store original HTML if not already stored
+          if (!btn.hasAttribute("data-original-html-loading")) {
+            btn.setAttribute("data-original-html-loading", btn.innerHTML);
+          }
           btn.disabled = true;
-          btn.innerHTML =
-            '<span class="loading"></span>' + btn.textContent.trim();
+          var originalText = btn.getAttribute("data-original-html-loading");
+          // Extract text content from original HTML
+          var tempDiv = document.createElement("div");
+          tempDiv.innerHTML = originalText;
+          var textContent = tempDiv.textContent || tempDiv.innerText || "";
+          btn.innerHTML = '<span class="loading"></span>' + textContent.trim();
           activeButtons.add(buttonId);
         } else {
           btn.disabled = false;
-          var text = btn.textContent.trim();
-          btn.innerHTML = text.replace(/<span class="loading"><\/span>/, "");
+          // Restore original HTML
+          var originalHTML = btn.getAttribute("data-original-html-loading");
+          if (originalHTML) {
+            btn.innerHTML = originalHTML;
+          } else {
+            // Fallback: remove loading spinner if original not stored
+            btn.innerHTML = btn.innerHTML.replace(
+              /<span class="loading"><\/span>\s*/,
+              ""
+            );
+          }
           activeButtons.delete(buttonId);
         }
+      }
+
+      // --- ESCAPE FUNCTIONS ---
+      function escapeHtml(text) {
+        var div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
       }
 
       // --- RESULT DISPLAY ---
@@ -733,148 +761,211 @@
         el.innerHTML = html;
         el.className = "result-box" + (isError ? " error" : "");
         el.style.display = "block";
+
+        // Attach event listeners to copy buttons after HTML is inserted
+        var copyButtons = el.querySelectorAll(".copy-btn");
+        copyButtons.forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            var textToCopy = btn.getAttribute("data-copy-text");
+            copyToClipboard(textToCopy, btn);
+          });
+        });
       }
 
       function formatResult(data, type) {
         var html = "";
 
         if (type === "wgs_to_minna") {
+          // Ensure lat and lon are numbers
+          var lat =
+            typeof data.lat === "number" ? data.lat : parseFloat(data.lat);
+          var lon =
+            typeof data.lon === "number" ? data.lon : parseFloat(data.lon);
+          var latDms = data.lat_dms || "";
+          var lonDms = data.lon_dms || "";
+
+          if (isNaN(lat) || isNaN(lon)) {
+            return '<div class="result-item"><span class="result-label">Error:</span><span class="result-value">Invalid coordinate data received</span></div>';
+          }
+
           html =
             '<div class="result-item">' +
             '<span class="result-label">Minna Latitude:</span>' +
             '<span class="result-value">' +
-            data.lat_dms +
+            escapeHtml(latDms) +
             "</span>" +
-            '<button class="copy-btn" onclick="copyToClipboard(\'' +
-            data.lat_dms +
-            '\', this)"><i class="fas fa-copy"></i></button>' +
+            '<button class="copy-btn" data-copy-text="' +
+            escapeHtml(latDms) +
+            '"><i class="fas fa-copy"></i></button>' +
             "</div>";
           html +=
             '<div class="result-item">' +
             '<span class="result-label">Decimal:</span>' +
             '<span class="result-value">' +
-            data.lat.toFixed(8) +
+            escapeHtml(lat.toFixed(8)) +
             "</span>" +
-            '<button class="copy-btn" onclick="copyToClipboard(\'' +
-            data.lat.toFixed(8) +
-            '\', this)"><i class="fas fa-copy"></i></button>' +
+            '<button class="copy-btn" data-copy-text="' +
+            escapeHtml(lat.toFixed(8)) +
+            '"><i class="fas fa-copy"></i></button>' +
             "</div>";
           html +=
             '<div class="result-item">' +
             '<span class="result-label">Minna Longitude:</span>' +
             '<span class="result-value">' +
-            data.lon_dms +
+            escapeHtml(lonDms) +
             "</span>" +
-            '<button class="copy-btn" onclick="copyToClipboard(\'' +
-            data.lon_dms +
-            '\', this)"><i class="fas fa-copy"></i></button>' +
+            '<button class="copy-btn" data-copy-text="' +
+            escapeHtml(lonDms) +
+            '"><i class="fas fa-copy"></i></button>' +
             "</div>";
           html +=
             '<div class="result-item">' +
             '<span class="result-label">Decimal:</span>' +
             '<span class="result-value">' +
-            data.lon.toFixed(8) +
+            escapeHtml(lon.toFixed(8)) +
             "</span>" +
-            '<button class="copy-btn" onclick="copyToClipboard(\'' +
-            data.lon.toFixed(8) +
-            '\', this)"><i class="fas fa-copy"></i></button>' +
+            '<button class="copy-btn" data-copy-text="' +
+            escapeHtml(lon.toFixed(8)) +
+            '"><i class="fas fa-copy"></i></button>' +
             "</div>";
         } else if (type === "wgs_to_utm") {
+          // Ensure easting and northing are numbers
+          var easting =
+            typeof data.easting === "number"
+              ? data.easting
+              : parseFloat(data.easting);
+          var northing =
+            typeof data.northing === "number"
+              ? data.northing
+              : parseFloat(data.northing);
+          var zone = data.zone || "";
+
+          if (isNaN(easting) || isNaN(northing)) {
+            return '<div class="result-item"><span class="result-label">Error:</span><span class="result-value">Invalid UTM data received</span></div>';
+          }
+
           html =
             '<div class="result-item">' +
             '<span class="result-label">Zone:</span>' +
             '<span class="result-value">' +
-            data.zone +
+            escapeHtml(String(zone)) +
             "</span>" +
             "</div>";
           html +=
             '<div class="result-item">' +
             '<span class="result-label">Easting:</span>' +
             '<span class="result-value">' +
-            data.easting +
+            escapeHtml(easting.toFixed(3)) +
             " m</span>" +
-            '<button class="copy-btn" onclick="copyToClipboard(\'' +
-            data.easting +
-            '\', this)"><i class="fas fa-copy"></i></button>' +
+            '<button class="copy-btn" data-copy-text="' +
+            escapeHtml(easting.toFixed(3)) +
+            '"><i class="fas fa-copy"></i></button>' +
             "</div>";
           html +=
             '<div class="result-item">' +
             '<span class="result-label">Northing:</span>' +
             '<span class="result-value">' +
-            data.northing +
+            escapeHtml(northing.toFixed(3)) +
             " m</span>" +
-            '<button class="copy-btn" onclick="copyToClipboard(\'' +
-            data.northing +
-            '\', this)"><i class="fas fa-copy"></i></button>' +
+            '<button class="copy-btn" data-copy-text="' +
+            escapeHtml(northing.toFixed(3)) +
+            '"><i class="fas fa-copy"></i></button>' +
             "</div>";
         } else if (type === "minna_to_wgs" || type === "utm_to_wgs") {
+          // Ensure lat and lon are numbers
+          var lat =
+            typeof data.lat === "number" ? data.lat : parseFloat(data.lat);
+          var lon =
+            typeof data.lon === "number" ? data.lon : parseFloat(data.lon);
+          var latDms = data.lat_dms || "";
+          var lonDms = data.lon_dms || "";
+
+          if (isNaN(lat) || isNaN(lon)) {
+            return '<div class="result-item"><span class="result-label">Error:</span><span class="result-value">Invalid coordinate data received</span></div>';
+          }
+
           html =
             '<div class="result-item">' +
             '<span class="result-label">WGS84 Latitude:</span>' +
             '<span class="result-value">' +
-            data.lat_dms +
+            escapeHtml(latDms) +
             "</span>" +
-            '<button class="copy-btn" onclick="copyToClipboard(\'' +
-            data.lat_dms +
-            '\', this)"><i class="fas fa-copy"></i></button>' +
+            '<button class="copy-btn" data-copy-text="' +
+            escapeHtml(latDms) +
+            '"><i class="fas fa-copy"></i></button>' +
             "</div>";
           html +=
             '<div class="result-item">' +
             '<span class="result-label">Decimal:</span>' +
             '<span class="result-value">' +
-            data.lat.toFixed(8) +
+            escapeHtml(lat.toFixed(8)) +
             "</span>" +
-            '<button class="copy-btn" onclick="copyToClipboard(\'' +
-            data.lat.toFixed(8) +
-            '\', this)"><i class="fas fa-copy"></i></button>' +
+            '<button class="copy-btn" data-copy-text="' +
+            escapeHtml(lat.toFixed(8)) +
+            '"><i class="fas fa-copy"></i></button>' +
             "</div>";
           html +=
             '<div class="result-item">' +
             '<span class="result-label">WGS84 Longitude:</span>' +
             '<span class="result-value">' +
-            data.lon_dms +
+            escapeHtml(lonDms) +
             "</span>" +
-            '<button class="copy-btn" onclick="copyToClipboard(\'' +
-            data.lon_dms +
-            '\', this)"><i class="fas fa-copy"></i></button>' +
+            '<button class="copy-btn" data-copy-text="' +
+            escapeHtml(lonDms) +
+            '"><i class="fas fa-copy"></i></button>' +
             "</div>";
           html +=
             '<div class="result-item">' +
             '<span class="result-label">Decimal:</span>' +
             '<span class="result-value">' +
-            data.lon.toFixed(8) +
+            escapeHtml(lon.toFixed(8)) +
             "</span>" +
-            '<button class="copy-btn" onclick="copyToClipboard(\'' +
-            data.lon.toFixed(8) +
-            '\', this)"><i class="fas fa-copy"></i></button>' +
+            '<button class="copy-btn" data-copy-text="' +
+            escapeHtml(lon.toFixed(8)) +
+            '"><i class="fas fa-copy"></i></button>' +
             "</div>";
         } else if (type === "minna_to_utm") {
+          // Ensure easting and northing are numbers
+          var easting =
+            typeof data.easting === "number"
+              ? data.easting
+              : parseFloat(data.easting);
+          var northing =
+            typeof data.northing === "number"
+              ? data.northing
+              : parseFloat(data.northing);
+          var zone = data.zone || "";
+
+          if (isNaN(easting) || isNaN(northing)) {
+            return '<div class="result-item"><span class="result-label">Error:</span><span class="result-value">Invalid UTM data received</span></div>';
+          }
+
           html =
             '<div class="result-item">' +
             '<span class="result-label">Zone:</span>' +
             '<span class="result-value">' +
-            data.zone +
+            escapeHtml(String(zone)) +
             "</span>" +
             "</div>";
           html +=
             '<div class="result-item">' +
             '<span class="result-label">Easting:</span>' +
             '<span class="result-value">' +
-            data.easting +
+            escapeHtml(easting.toFixed(3)) +
             " m</span>" +
-            '<button class="copy-btn" onclick="copyToClipboard(\'' +
-            data.easting +
-            '\', this)"><i class="fas fa-copy"></i></button>' +
+            '<button class="copy-btn" data-copy-text="' +
+            escapeHtml(easting.toFixed(3)) +
+            '"><i class="fas fa-copy"></i></button>' +
             "</div>";
           html +=
             '<div class="result-item">' +
             '<span class="result-label">Northing:</span>' +
             '<span class="result-value">' +
-            data.northing +
+            escapeHtml(northing.toFixed(3)) +
             " m</span>" +
-            '<button class="copy-btn" onclick="copyToClipboard(\'' +
-            data.northing +
-            '\', this)"><i class="fas fa-copy"></i></button>' +
+            '<button class="copy-btn" data-copy-text="' +
+            escapeHtml(northing.toFixed(3)) +
+            '"><i class="fas fa-copy"></i></button>' +
             "</div>";
         }
 
@@ -883,20 +974,62 @@
 
       // --- COPY TO CLIPBOARD ---
       function copyToClipboard(text, button) {
-        navigator.clipboard
-          .writeText(text)
-          .then(function () {
-            var originalHTML = button.innerHTML;
+        // Store original HTML if not already stored
+        if (!button.hasAttribute("data-original-html")) {
+          button.setAttribute("data-original-html", button.innerHTML);
+        }
+        var originalHTML = button.getAttribute("data-original-html");
+
+        // Try modern clipboard API first
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard
+            .writeText(text)
+            .then(function () {
+              button.innerHTML = '<i class="fas fa-check"></i>';
+              button.classList.add("copied");
+              setTimeout(function () {
+                button.innerHTML = originalHTML;
+                button.classList.remove("copied");
+              }, 2000);
+            })
+            .catch(function (err) {
+              // Fallback to older method
+              fallbackCopyToClipboard(text, button, originalHTML);
+            });
+        } else {
+          // Fallback for older browsers or non-HTTPS
+          fallbackCopyToClipboard(text, button, originalHTML);
+        }
+      }
+
+      // Fallback copy method for older browsers
+      function fallbackCopyToClipboard(text, button, originalHTML) {
+        var textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        try {
+          var successful = document.execCommand("copy");
+          if (successful) {
             button.innerHTML = '<i class="fas fa-check"></i>';
             button.classList.add("copied");
             setTimeout(function () {
               button.innerHTML = originalHTML;
               button.classList.remove("copied");
             }, 2000);
-          })
-          .catch(function (err) {
-            alert("Failed to copy: " + err);
-          });
+          } else {
+            alert("Failed to copy. Please copy manually: " + text);
+          }
+        } catch (err) {
+          alert("Failed to copy. Please copy manually: " + text);
+        } finally {
+          document.body.removeChild(textArea);
+        }
       }
 
       // --- MAP UPDATE ---
@@ -953,20 +1086,24 @@
             document.getElementById("wgs_lon").value = lon.toFixed(7);
             clearAllErrors();
 
-            updateMap(
-              lat,
-              lon,
-              "<b>Your GPS Location</b><br>Accuracy: ±" + Math.round(acc) + "m"
-            );
+            if (map) {
+              updateMap(
+                lat,
+                lon,
+                "<b>Your GPS Location</b><br>Accuracy: ±" +
+                  Math.round(acc) +
+                  "m"
+              );
 
-            if (accuracyCircle) map.removeLayer(accuracyCircle);
-            accuracyCircle = L.circle([lat, lon], {
-              color: "#136AEC",
-              fillColor: "#136AEC",
-              fillOpacity: 0.15,
-              radius: acc,
-            }).addTo(map);
-            map.fitBounds(accuracyCircle.getBounds());
+              if (accuracyCircle) map.removeLayer(accuracyCircle);
+              accuracyCircle = L.circle([lat, lon], {
+                color: "#136AEC",
+                fillColor: "#136AEC",
+                fillOpacity: 0.15,
+                radius: acc,
+              }).addTo(map);
+              map.fitBounds(accuracyCircle.getBounds());
+            }
           },
           function (err) {
             btn.disabled = false;
@@ -1000,7 +1137,7 @@
         var buttonId = "";
 
         // Gather and validate inputs
-        if (type.includes("wgs")) {
+        if (type.startsWith("wgs")) {
           data.lat = document.getElementById("wgs_lat").value.trim();
           data.lon = document.getElementById("wgs_lon").value.trim();
 
@@ -1095,11 +1232,16 @@
             setLoading(buttonId, false);
 
             if (!res.success) {
-              var resultId = type.includes("wgs")
-                ? "res_wgs"
-                : type.includes("minna")
-                ? "res_minna"
-                : "res_utm";
+              var resultId;
+              if (type === "utm_to_wgs") {
+                resultId = "res_utm";
+              } else if (type.includes("wgs") && type.startsWith("wgs")) {
+                resultId = "res_wgs";
+              } else if (type.includes("minna")) {
+                resultId = "res_minna";
+              } else {
+                resultId = "res_utm";
+              }
               showResult(
                 resultId,
                 "<strong>Error:</strong> " +
@@ -1110,19 +1252,52 @@
             }
 
             // Display results
-            var resultId = type.includes("wgs")
-              ? "res_wgs"
-              : type.includes("minna")
-              ? "res_minna"
-              : "res_utm";
+            var resultId;
+            if (type === "utm_to_wgs") {
+              resultId = "res_utm";
+            } else if (type.includes("wgs") && type.startsWith("wgs")) {
+              resultId = "res_wgs";
+            } else if (type.includes("minna")) {
+              resultId = "res_minna";
+            } else {
+              resultId = "res_utm";
+            }
             var html = formatResult(res, type);
             showResult(resultId, html, false);
 
             // Update map
             if (type === "wgs_to_minna" || type === "wgs_to_utm") {
-              var lat = parseFloat(data.lat);
-              var lon = parseFloat(data.lon);
-              if (!isNaN(lat) && !isNaN(lon)) {
+              // Parse DMS or decimal input
+              var latStr = data.lat.trim();
+              var lonStr = data.lon.trim();
+              // Try to parse as decimal first, then as DMS
+              var lat = parseFloat(latStr);
+              var lon = parseFloat(lonStr);
+
+              // If simple parse fails, try DMS parsing (basic)
+              if (isNaN(lat)) {
+                var latParts = latStr
+                  .replace(/[°'"]/g, " ")
+                  .split(/\s+/)
+                  .filter((p) => p);
+                if (latParts.length >= 1) lat = parseFloat(latParts[0]);
+              }
+              if (isNaN(lon)) {
+                var lonParts = lonStr
+                  .replace(/[°'"]/g, " ")
+                  .split(/\s+/)
+                  .filter((p) => p);
+                if (lonParts.length >= 1) lon = parseFloat(lonParts[0]);
+              }
+
+              if (
+                !isNaN(lat) &&
+                !isNaN(lon) &&
+                lat >= -90 &&
+                lat <= 90 &&
+                lon >= -180 &&
+                lon <= 180
+              ) {
                 updateMap(
                   lat,
                   lon,
@@ -1133,36 +1308,63 @@
                 );
               }
             } else if (type === "minna_to_wgs" || type === "utm_to_wgs") {
-              updateMap(
-                res.lat,
-                res.lon,
-                "Converted WGS84<br>Lat: " +
-                  res.lat.toFixed(6) +
-                  "<br>Lon: " +
-                  res.lon.toFixed(6)
-              );
+              var resLat =
+                typeof res.lat === "number" ? res.lat : parseFloat(res.lat);
+              var resLon =
+                typeof res.lon === "number" ? res.lon : parseFloat(res.lon);
+              if (!isNaN(resLat) && !isNaN(resLon)) {
+                updateMap(
+                  resLat,
+                  resLon,
+                  "Converted WGS84<br>Lat: " +
+                    resLat.toFixed(6) +
+                    "<br>Lon: " +
+                    resLon.toFixed(6)
+                );
+              }
             } else if (type === "minna_to_utm") {
-              updateMap(
-                res.map_lat,
-                res.map_lon,
-                "Converted Location<br>Zone: " +
-                  res.zone +
-                  "<br>E: " +
-                  res.easting +
-                  "m<br>N: " +
-                  res.northing +
-                  "m"
-              );
+              var mapLat =
+                typeof res.map_lat === "number"
+                  ? res.map_lat
+                  : parseFloat(res.map_lat);
+              var mapLon =
+                typeof res.map_lon === "number"
+                  ? res.map_lon
+                  : parseFloat(res.map_lon);
+              if (
+                !isNaN(mapLat) &&
+                !isNaN(mapLon) &&
+                res.zone &&
+                res.easting &&
+                res.northing
+              ) {
+                updateMap(
+                  mapLat,
+                  mapLon,
+                  "Converted Location<br>Zone: " +
+                    res.zone +
+                    "<br>E: " +
+                    res.easting +
+                    "m<br>N: " +
+                    res.northing +
+                    "m"
+                );
+              }
             }
           })
           .catch((err) => {
             setLoading(buttonId, false);
             console.error("Conversion error:", err);
-            var resultId = type.includes("wgs")
-              ? "res_wgs"
-              : type.includes("minna")
-              ? "res_minna"
-              : "res_utm";
+            var resultId;
+            if (type === "utm_to_wgs") {
+              resultId = "res_utm";
+            } else if (type.includes("wgs") && type.startsWith("wgs")) {
+              resultId = "res_wgs";
+            } else if (type.includes("minna")) {
+              resultId = "res_minna";
+            } else {
+              resultId = "res_utm";
+            }
             showResult(
               resultId,
               "<strong>Error:</strong> Network error. Please check your connection and try again.",
