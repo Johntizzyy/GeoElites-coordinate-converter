@@ -155,6 +155,10 @@ def convert():
     except Exception as e:
         return jsonify({"success": False, "error": f"Conversion error: {str(e)}"}), 500
 
+@app.route('/google55a2acf473e746de.html')
+def google_verification():
+    return "google-site-verification: google55a2acf473e746de.html"
+
 if __name__ == "__main__":
     app.run(debug=True)
 
